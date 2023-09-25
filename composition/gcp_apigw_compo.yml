@@ -1,0 +1,116 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: apigw-gcp
+spec:
+  # Link Composition to a specific XR and version
+  compositeTypeRef:
+    apiVersion: example.com/v1
+    kind: xapigw
+  resources:
+    - name: apigw-vpc
+      base:
+        apiVersion: compute.gcp.upbound.io/v1beta1
+        kind: Network
+        metadata:
+          name: apigw-vpc
+          labels:
+            type: vpc
+        spec:
+          forProvider:
+            autoCreateSubnetworks: false
+            description: kong apigw vpc
+          providerConfigRef:
+            name: gcp-admin
+    - name: apigw-public-subnet
+      base:
+        apiVersion: compute.gcp.upbound.io/v1beta1
+        kind: Subnetwork
+        metadata:
+          labels:
+            tier: public
+        spec:
+          forProvider:
+            name: apigw-public-subnet-1
+            ipCidrRange: 10.0.1.0/24
+            region: asia-southeast1
+            networkSelector:
+              matchControllerRef: true
+          providerConfigRef:
+            name: gcp-admin
+      patches:
+        - fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+          transforms:
+            - type: map
+              map: 
+                SG: "asia-southeast1"
+                US: "us-east1"
+                EU: "europe-north1"
+    - name: apigw-private-subnet
+      base:
+        apiVersion: compute.gcp.upbound.io/v1beta1
+        kind: Subnetwork
+        metadata:
+          labels:
+            tier: private
+        spec:
+          forProvider:
+            name: apigw-private-subnet-1
+            ipCidrRange: 10.0.2.0/24
+            region: asia-southeast1
+            networkSelector:
+              matchControllerRef: true
+          providerConfigRef:
+            name: gcp-admin
+      patches:
+        - fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+          transforms:
+            - type: map
+              map: 
+                SG: "asia-southeast1"
+                US: "us-east1"
+                EU: "europe-north1"
+    - name: apigw-instance
+      base:
+        apiVersion: compute.gcp.upbound.io/v1beta1
+        kind: Instance
+        metadata:
+          labels:
+            name: apigw-01
+        spec:
+          forProvider:
+            bootDisk:
+              - initializeParams:
+                  - image: ubuntu-2204-lts
+            machineType: n1-standard-1
+            networkInterface:
+              - networkSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    type: vpc
+                subnetworkSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    tier: public
+            zone: us-east1-a
+          providerConfigRef:
+            name: gcp-admin
+      patches:
+        - fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.zone
+          transforms:
+            - type: map
+              map:
+                SG: "asia-southeast1-a"
+                US: "us-east1-a"
+                EU: "europe-north1-a"
+        - fromFieldPath: spec.parameters.env
+          toFieldPath: spec.forProvider.machineType
+          transforms:
+            - type: map
+              map: 
+                staging: "e2-micro"
+                preprod: "e2-small"
+                production: "e2-medium"
