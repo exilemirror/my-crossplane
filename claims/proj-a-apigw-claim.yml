@@ -1,0 +1,14 @@
+apiVersion: example.com/v1
+kind: kongapigw
+metadata:
+  name: proj-a-kong-apigw
+  namespace: production
+spec:
+  compositionRef:
+    # Possible vales apigw-aws, apigw-gcp
+    name: apigw-aws
+  parameters:
+    # Possible vales SG, US, EU
+    region: "US"
+    # Possible values staging, preprod, production
+    env: "production"
