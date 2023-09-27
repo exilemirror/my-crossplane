@@ -1,0 +1,41 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  #'<plural>.<group>' from spec.name.plural
+  name: xawsvpcs.example.com 
+spec:
+  # API group
+  group: example.com
+  # Singular name and plural name.
+  names:
+    kind: xawsvpc
+    plural: xawsvpcs
+  claimNames:
+    kind: awsvpc
+    plural: awsvpcs
+  # Start from alpha to beta to production to deprecated.
+  versions:
+  - name: v1
+    # Is the specific version actively served
+    served: true
+    # Can the version be referenced from an API implementation
+    referenceable: true
+    # OpenAPI schema 
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              region:
+                type: string
+              env:
+                type: string
+              project_prefix:
+                type: string
+              project_code:
+                type: string
+            required:
+              - region
+              - env
