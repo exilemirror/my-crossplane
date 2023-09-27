@@ -1,0 +1,347 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: aws-vpc
+spec:
+  # Link Composition to a specific XR and version
+  compositeTypeRef:
+    apiVersion: example.com/v1
+    kind: xawsvpc
+  patchSets:
+    - name: region-patch
+      patches:
+      - type: FromCompositeFieldPath
+        fromFieldPath: spec.region
+        toFieldPath: spec.forProvider.region
+      - type: FromCompositeFieldPath
+        fromFieldPath: spec.env
+        toFieldPath: spec.forProvider.tags.Environment
+  resources:
+    - name: vpc
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: VPC
+        metadata:
+          labels:
+            type: vpc
+        spec:
+          forProvider:
+            cidrBlock: 10.0.0.0/16
+            region: ap-southeast-1
+            enableDnsHostnames: true
+            enableDnsSupport: true
+            tags:
+              Name: aws-vpc
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-vpc"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: internet-gateway
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: InternetGateway
+        metadata:
+          name: igw
+          labels:
+            tier: public
+        spec:
+          forProvider:
+            region: ap-southeast-1
+            vpcIdSelector:
+              matchControllerRef: true
+            tags:
+              Name: igw
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-igw"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: eip-1a
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: EIP
+        metadata:
+          name: eip-nat-1a
+          labels:
+            eip: eip-nat-1a
+        spec:
+          forProvider:
+            region: ap-southeast-1
+            vpc: true
+            tags:
+              Name: eip-nat-1a
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+    - name: eip-1b
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: EIP
+        metadata:
+          name: eip-nat-1b
+          labels:
+            eip: eip-nat-1b
+        spec:
+          forProvider:
+            region: ap-southeast-1
+            vpc: true
+            tags:
+              Name: eip-nat-1b
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+    - name: public-subnet-1a
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          labels:
+            tier: public-1a
+        spec:
+          forProvider:
+            cidrBlock: 10.0.1.0/24
+            availabilityZone: ap-southeast-1a
+            region: ap-southeast-1
+            vpcIdSelector:
+              matchControllerRef: true
+            tags:
+              Name: public-subnet-1a
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.region
+            strategy: string
+            string:
+              fmt: "%sa"
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-sn-pub-1a"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: public-subnet-1b
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          labels:
+            tier: public-1b
+        spec:
+          forProvider:
+            cidrBlock: 10.0.2.0/24
+            availabilityZone: ap-southeast-1b
+            region: ap-southeast-1
+            vpcIdSelector:
+              matchControllerRef: true
+            tags:
+              Name: public-subnet-1b
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.region
+            strategy: string
+            string:
+              fmt: "%sb"
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-sn-pub-1b"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: private-subnet-1a
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          labels:
+            tier: private
+        spec:
+          forProvider:
+            cidrBlock: 10.0.3.0/24
+            availabilityZone: ap-southeast-1a
+            region: ap-southeast-1
+            vpcIdSelector:
+              matchControllerRef: true
+            tags:
+              Name: private-subnet-1a
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.region
+            strategy: string
+            string:
+              fmt: "%sa"
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-sn-pvt-1a"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: private-subnet-1b
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          labels:
+            tier: private
+        spec:
+          forProvider:
+            cidrBlock: 10.0.4.0/24
+            availabilityZone: ap-southeast-1b
+            region: ap-southeast-1
+            vpcIdSelector:
+              matchControllerRef: true
+            tags:
+              Name: private-subnet-1b
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.region
+            strategy: string
+            string:
+              fmt: "%sb"
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-sn-pvt-1b"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: NAT-gateway-1a
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: NATGateway
+        metadata:
+          name: natgw-1a
+          labels:
+            zone: nat-1a
+        spec:
+          forProvider:
+            region: ap-southeast-1
+            allocationIdSelector:
+              matchControllerRef: true
+              matchLabels:
+                eip: eip-nat-1a
+            subnetIdSelector:
+              matchControllerRef: true
+              matchLabels:
+                tier: public-1a
+            tags:
+              Name: natgw-1a
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-natgw-1a"
+          toFieldPath: spec.forProvider.tags.Name
+    - name: NAT-gateway-1b
+      base:
+        apiVersion: ec2.aws.upbound.io/v1beta1
+        kind: NATGateway
+        metadata:
+          name: natgw-1b
+          labels:
+            zone: nat-1b
+        spec:
+          forProvider:
+            region: ap-southeast-1
+            allocationIdSelector:
+              matchControllerRef: true
+              matchLabels:
+                eip: eip-nat-1b
+            subnetIdSelector:
+              matchControllerRef: true
+              matchLabels:
+                tier: public-1b
+            tags:
+              Name: natgw-1b
+              Environment: staging
+          providerConfigRef:
+            name: aws-admin
+      patches:
+        - type: PatchSet
+          patchSetName: region-patch
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.project_prefix
+              - fromFieldPath: spec.project_code
+            strategy: string
+            string:
+              fmt: "%s-%s-natgw-1b"
+          toFieldPath: spec.forProvider.tags.Name
